@@ -1,0 +1,211 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model UserRoles {
+  id         Int       @id @default(autoincrement())
+  role_name  String    @unique
+  created_at DateTime  @default(now())
+  updated_at DateTime? @updatedAt
+  users      User[]
+
+  @@map("user_roles")
+}
+
+model User {
+  id                 Int               @id @default(autoincrement())
+  role_id            Int
+  full_name          String
+  email              String            @unique
+  password           String
+  phone_number       String
+  status             Status
+  role               UserRoles         @relation(fields: [role_id], references: [id])
+  carts              Cart[]
+  shipping_addresses ShippingAddress[]
+  orders             Order[]
+  wishlist           Wishlist[]
+
+  @@map("users")
+}
+
+model Category {
+  id            Int       @id @default(autoincrement())
+  category_name String
+  url_slug      String    @unique
+  parent_cat_id Int?
+  status        Status
+  products      Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id             Int              @id @default(autoincrement())
+  product_name   String
+  url_slug       String           @unique
+  cat_id         Int
+  description    String
+  price          Float
+  stock_quantity Int
+  status         Status
+  category       Category         @relation(fields: [cat_id], references: [id])
+  variants       ProductVariant[]
+  carts          Cart[]
+  order_items    OrderItem[]
+  wishlist       Wishlist[]
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id             Int         @id @default(autoincrement())
+  product_id     Int
+  color          String?
+  size           String?
+  price          Float
+  stock_quantity Int
+  product        Product     @relation(fields: [product_id], references: [id])
+  Cart           Cart[]
+  OrderItem      OrderItem[]
+  Wishlist       Wishlist[]
+
+  @@map("product_variants")
+}
+
+model Cart {
+  id                 Int             @id @default(autoincrement())
+  user_id            Int
+  product_id         Int?
+  product_variant_id Int?
+  quantity           Int
+  user               User            @relation(fields: [user_id], references: [id])
+  product            Product?        @relation(fields: [product_id], references: [id])
+  product_variant    ProductVariant? @relation(fields: [product_variant_id], references: [id])
+
+  @@map("carts")
+}
+
+model ShippingAddress {
+  id                   Int                    @id @default(autoincrement())
+  user_id              Int
+  full_address         String
+  state                String
+  city                 String
+  zip_code             String
+  user                 User                   @relation(fields: [user_id], references: [id])
+  OrderShippingAddress OrderShippingAddress[]
+
+  @@map("shipping_addresses")
+}
+
+model Order {
+  id                     Int                    @id @default(autoincrement())
+  order_number           String                 @unique
+  user_id                Int
+  total_amount           Float
+  discount_amount        Float
+  gross_amount           Float
+  shipping_amount        Float
+  net_amount             Float
+  status                 OrderStatus
+  payment_status         PaymentStatus
+  payment_type           PaymentType
+  payment_transaction_id String?
+  user                   User                   @relation(fields: [user_id], references: [id])
+  order_items            OrderItem[]
+  shipping_addresses     OrderShippingAddress[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id                 Int             @id @default(autoincrement())
+  order_id           Int
+  product_id         Int
+  product_variant_id Int?
+  product_name       String
+  color              String?
+  size               String?
+  price              Float
+  quantity           Int
+  total_amount       Float
+  order              Order           @relation(fields: [order_id], references: [id])
+  product            Product         @relation(fields: [product_id], references: [id])
+  product_variant    ProductVariant? @relation(fields: [product_variant_id], references: [id])
+
+  @@map("order_items")
+}
+
+model OrderShippingAddress {
+  id                  Int             @id @default(autoincrement())
+  order_id            Int
+  shipping_address_id Int
+  full_address        String
+  state               String
+  city                String
+  zip_code            String
+  order               Order           @relation(fields: [order_id], references: [id])
+  shipping_address    ShippingAddress @relation(fields: [shipping_address_id], references: [id])
+
+  @@map("order_shipping_addresses")
+}
+
+model Wishlist {
+  id                 Int             @id @default(autoincrement())
+  user_id            Int
+  product_id         Int
+  product_variant_id Int?
+  user               User            @relation(fields: [user_id], references: [id])
+  product            Product         @relation(fields: [product_id], references: [id])
+  product_variant    ProductVariant? @relation(fields: [product_variant_id], references: [id])
+
+  @@map("wishlist")
+}
+
+model Offer {
+  id             Int          @id @default(autoincrement())
+  coupon_code    String       @unique
+  discount_type  DiscountType
+  discount_value Float
+  start_date     DateTime
+  end_date       DateTime
+  description    String
+  status         Status
+
+  @@map("offers_discounts")
+}
+
+enum Status {
+  active
+  inactive
+  block
+}
+
+enum OrderStatus {
+  placed
+  processing
+  shipping
+  delivered
+}
+
+enum PaymentStatus {
+  paid
+  not_paid
+}
+
+enum PaymentType {
+  netbanking
+  upi
+  cod
+}
+
+enum DiscountType {
+  fixed
+  rate
+}
